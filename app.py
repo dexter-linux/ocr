@@ -1,4 +1,5 @@
 import io
+import numpy as np
 import streamlit as st
 import easyocr
 from PIL import Image
@@ -26,22 +27,23 @@ def extract_from_pdf(file_bytes, reader) -> str:
 
     for idx, page in enumerate(pdf_reader.pages):
         text = page.extract_text()
-        # If the page contains standard digital text, use it
+        # If the page contains standard digital text, use it directly
         if text and len(text.strip()) > 20:
             extracted_pages.append(f"--- Page {idx + 1} ---\n" + text.strip())
         else:
-            # Fallback: Convert page to image and perform OCR
+            # Fallback: Convert page to image, cast to NumPy array, and run OCR
             images = convert_from_bytes(file_bytes, first_page=idx + 1, last_page=idx + 1)
             if images:
-                ocr_result = reader.readtext(images[0], detail=0)
+                img_np = np.array(images[0])  # Convert PIL Image to NumPy array
+                ocr_result = reader.readtext(img_np, detail=0)
                 extracted_pages.append(f"--- Page {idx + 1} (OCR) ---\n" + "\n".join(ocr_result))
 
     return "\n\n".join(extracted_pages)
 
 def extract_from_image(file_bytes, reader) -> str:
     """Extract text from raw image files (PNG/JPG)."""
-    image = Image.open(io.BytesIO(file_bytes))
-    results = reader.readtext(image, detail=0)
+    # EasyOCR accepts raw bytes directly for images
+    results = reader.readtext(file_bytes, detail=0)
     return "\n".join(results)
 
 
